@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFirestore } from '../hooks/useFirestore';
 import { useHandTracking } from '../hooks/useHandTracking';
 import HandTrackingVisualizer from '../components/HandTrackingVisualizer';
-import { FaArrowLeft, FaCamera, FaVolumeUp, FaVolumeMute, FaExpand, FaCompress, FaHand } from 'react-icons/fa';
+import { FaArrowLeft, FaCamera, FaVolumeUp, FaVolumeMute, FaExpand, FaCompress, FaHandPaper } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const ViewerContainer = styled.div`
@@ -431,7 +431,7 @@ const ModelViewer = () => {
             className={handTrackingActive ? 'active' : ''}
             title="Toggle hand tracking"
           >
-            <FaHand />
+            <FaHandPaper />
           </ControlButton>
           
           <ControlButton 

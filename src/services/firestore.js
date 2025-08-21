@@ -92,14 +92,44 @@ export const updateUserRole = async (userId, role) => {
 // Model Management
 export const uploadModel = async (modelFile, configFile, metadata, teacherId) => {
   try {
-    console.log('Starting model upload:', { modelFile, metadata, teacherId });
+    console.log('Starting model upload:', { 
+      modelFileName: modelFile?.name, 
+      modelFileType: modelFile?.type,
+      modelFileSize: modelFile?.size,
+      metadata, 
+      teacherId 
+    });
     
     const modelId = doc(collection(db, 'models')).id;
     console.log('Generated model ID:', modelId);
     
+    // Determine file extension and storage path
+    const fileName = modelFile.name;
+    const fileExtension = fileName.split('.').pop().toLowerCase();
+    let storagePath = `models/${modelId}/`;
+    let storageFileName = '';
+    
+    // Set storage file name based on file type
+    switch (fileExtension) {
+      case 'glb':
+        storageFileName = 'model.glb';
+        break;
+      case 'gltf':
+        storageFileName = 'model.gltf';
+        break;
+      case 'obj':
+        storageFileName = 'model.obj';
+        break;
+      case 'html':
+        storageFileName = 'interactive.html';
+        break;
+      default:
+        storageFileName = fileName; // Keep original name for other file types
+    }
+    
     // Upload model file to Storage
     console.log('Uploading model file...');
-    const modelRef = ref(storage, `models/${modelId}/model.glb`);
+    const modelRef = ref(storage, storagePath + storageFileName);
     const modelUpload = await uploadBytes(modelRef, modelFile);
     const modelURL = await getDownloadURL(modelUpload.ref);
     console.log('Model file uploaded:', modelURL);
@@ -117,6 +147,8 @@ export const uploadModel = async (modelFile, configFile, metadata, teacherId) =>
       description: metadata.description,
       fileName: modelURL,
       configFileName: configURL,
+      fileType: fileExtension,
+      originalFileName: fileName,
       uploadedBy: teacherId,
       createdAt: serverTimestamp(),
       isActive: true,

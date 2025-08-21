@@ -268,6 +268,7 @@ const TeacherPortal = () => {
     name: '',
     description: '',
     subject: '',
+    grade: '',
     estimatedTime: '',
     file: null
   });
@@ -310,19 +311,47 @@ const TeacherPortal = () => {
 
     setLoading(true);
     try {
-      await uploadModel(user.uid, newModel);
+      // Create config data
+      const configData = {
+        name: newModel.name,
+        description: newModel.description,
+        subject: newModel.subject,
+        estimatedTime: newModel.estimatedTime,
+        gestures: []
+      };
+      
+      // Convert config to blob
+      const configBlob = new Blob([JSON.stringify(configData, null, 2)], {
+        type: 'application/json'
+      });
+      
+      // Create metadata object
+      const metadata = {
+        name: newModel.name,
+        description: newModel.description,
+        subject: newModel.subject,
+        grade: newModel.grade || 'General',
+        topic: newModel.subject,
+        tags: newModel.subject ? [newModel.subject] : []
+      };
+      
+      // Call uploadModel with correct parameter order: (modelFile, configFile, metadata, teacherId)
+      await uploadModel(newModel.file, configBlob, metadata, user.uid);
       toast.success('Model uploaded successfully!');
       setNewModel({
         name: '',
         description: '',
         subject: '',
+        grade: '',
         estimatedTime: '',
         file: null
       });
+      // Reset file input
+      document.getElementById('file-upload').value = '';
       loadModels();
     } catch (error) {
       console.error('Error uploading model:', error);
-      toast.error('Failed to upload model');
+      toast.error('Failed to upload model: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -352,12 +381,12 @@ const TeacherPortal = () => {
       <UploadSection onClick={() => document.getElementById('file-upload').click()}>
         <UploadIcon>📁</UploadIcon>
         <UploadText>
-          Click to upload a new 3D model (GLB, GLTF, OBJ formats supported)
+          Click to upload a new 3D model or interactive content (GLB, GLTF, OBJ, HTML formats supported)
         </UploadText>
         <input
           id="file-upload"
           type="file"
-          accept=".glb,.gltf,.obj"
+          accept=".glb,.gltf,.obj,.html"
           onChange={handleFileUpload}
           style={{ display: 'none' }}
         />
@@ -383,6 +412,16 @@ const TeacherPortal = () => {
               value={newModel.subject}
               onChange={(e) => setNewModel({ ...newModel, subject: e.target.value })}
               placeholder="e.g., Biology"
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Grade Level</Label>
+            <Input
+              type="text"
+              value={newModel.grade}
+              onChange={(e) => setNewModel({ ...newModel, grade: e.target.value })}
+              placeholder="e.g., 5th Grade, High School"
             />
           </FormGroup>
 

@@ -2,7 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaSignOutAlt, FaUser, FaChalkboardTeacher, FaHand } from 'react-icons/fa';
+import { FaSignOutAlt, FaUser, FaChalkboardTeacher, FaHandPaper } from 'react-icons/fa';
 
 const HeaderContainer = styled.header`
   background: rgba(255, 255, 255, 0.95);
@@ -149,7 +149,7 @@ const Header = () => {
             <FaUser /> Dashboard
           </NavLink>
           <NavLink to="/demo/hand-tracking">
-            <FaHand /> Hand Demo
+            <FaHandPaper /> Hand Demo
           </NavLink>
           {userProfile?.role === 'teacher' && (
             <NavLink to="/teacher">
