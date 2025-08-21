@@ -1,0 +1,46 @@
+{
+  "modelName": "SolarSystem",
+  "modelFile": "SolarSystem.glb",
+  "description": "Interactive Solar System for astronomy learning",
+  "gestureMap": {
+    "pinch": "zoomIn",
+    "pinchOut": "zoomOut",
+    "swipeLeft": "rotateLeft",
+    "swipeRight": "rotateRight",
+    "openPalm": "resetView",
+    "fist": "pauseOrbits",
+    "pointUp": "speedUpTime",
+    "pointDown": "slowDownTime",
+    "peace": "focusEarth",
+    "thumbsUp": "showOrbits"
+  },
+  "animations": {
+    "planetRotation": {
+      "duration": 10000,
+      "loop": true,
+      "autoStart": true
+    },
+    "orbitalMotion": {
+      "duration": 60000,
+      "loop": true,
+      "autoStart": true
+    }
+  },
+  "hotspots": [
+    {
+      "name": "sun",
+      "position": [0, 0, 0],
+      "info": "The star at the center of our solar system"
+    },
+    {
+      "name": "earth",
+      "position": [3, 0, 0],
+      "info": "Third planet from the sun, our home"
+    },
+    {
+      "name": "mars",
+      "position": [4.5, 0, 0],
+      "info": "The red planet, fourth from the sun"
+    }
+  ]
+}

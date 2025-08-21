@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - users can read/write their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Models collection - public read, authenticated write
+    match /models/{modelId} {
+      allow read: if true; // Public read access
+      allow write: if request.auth != null && 
+        (request.auth.token.role == 'teacher' || request.auth.token.admin == true);
+    }
+    
+    // Assignments collection
+    match /assignments/{assignmentId} {
+      allow read: if request.auth != null && 
+        (request.auth.uid == resource.data.teacherId || 
+         request.auth.uid in resource.data.studentIds);
+      allow write: if request.auth != null && 
+        (request.auth.token.role == 'teacher' || request.auth.token.admin == true);
+    }
+    
+    // Analytics collection - teachers and admins only
+    match /analytics/{docId} {
+      allow read, write: if request.auth != null && 
+        (request.auth.token.role == 'teacher' || request.auth.token.admin == true);
+    }
+    
+    // Sessions collection - users can write their own sessions
+    match /sessions/{sessionId} {
+      allow read, write: if request.auth != null && 
+        request.auth.uid == resource.data.userId;
+    }
+  }
+}

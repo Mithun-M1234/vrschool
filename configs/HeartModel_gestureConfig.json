@@ -1,0 +1,41 @@
+{
+  "modelName": "HeartModel",
+  "modelFile": "HeartModel.glb",
+  "description": "Interactive 3D Heart Model for anatomy learning",
+  "gestureMap": {
+    "pinch": "zoomIn",
+    "pinchOut": "zoomOut",
+    "swipeLeft": "rotateLeft",
+    "swipeRight": "rotateRight",
+    "swipeUp": "rotateUp",
+    "swipeDown": "rotateDown",
+    "openPalm": "resetView",
+    "fist": "pauseAnimation",
+    "pointUp": "highlightAorta",
+    "pointDown": "highlightVentricles"
+  },
+  "animations": {
+    "heartbeat": {
+      "duration": 2000,
+      "loop": true,
+      "autoStart": true
+    }
+  },
+  "hotspots": [
+    {
+      "name": "aorta",
+      "position": [0, 0.5, 0],
+      "info": "Main artery carrying blood from heart to body"
+    },
+    {
+      "name": "leftVentricle",
+      "position": [-0.3, -0.2, 0],
+      "info": "Pumps oxygenated blood to the body"
+    },
+    {
+      "name": "rightVentricle",
+      "position": [0.3, -0.2, 0],
+      "info": "Pumps blood to the lungs"
+    }
+  ]
+}

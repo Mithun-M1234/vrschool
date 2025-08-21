@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gesture-Controlled 3D Learning Platform</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  
+  <!-- MediaPipe -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-storage-compat.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header>
+      <h1>🤖 Gesture-Controlled 3D Learning</h1>
+      <div id="userInfo"></div>
+    </header>
+
+    <!-- Main Interface -->
+    <main id="mainContent">
+      <!-- Login Screen -->
+      <div id="loginScreen" class="screen active">
+        <div class="login-container">
+          <h2>Welcome to 3D Learning Platform</h2>
+          <button id="loginBtn" class="btn-primary">Login with Google</button>
+        </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div id="dashboard" class="screen">
+        <h2>Your 3D Models</h2>
+        <div id="modelsList" class="models-grid"></div>
+      </div>
+
+      <!-- 3D Viewer -->
+      <div id="viewer" class="screen">
+        <div id="threejs-container"></div>
+        <div id="gestureInfo">
+          <h3>Gesture Controls</h3>
+          <div id="detectedGesture">Detecting...</div>
+          <div id="gestureInstructions"></div>
+        </div>
+        <button id="backBtn" class="btn-secondary">Back to Dashboard</button>
+      </div>
+    </main>
+
+    <!-- Camera feed (hidden) -->
+    <video id="input_video" style="display: none;"></video>
+    <canvas id="output_canvas" style="display: none;"></canvas>
+  </div>
+
+  <!-- Load our app -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

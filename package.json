@@ -1,0 +1,62 @@
+{
+  "name": "gesture-3d-learning-platform",
+  "version": "1.0.0",
+  "description": "Gesture-controlled 3D learning platform MVP for hackathons",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "npx webpack serve --mode development --open",
+    "build": "npx webpack --mode production",
+    "dev": "npx webpack serve --mode development",
+    "serve": "npx http-server build -p 8080 -c-1",
+    "legacy": "npx http-server frontend -p 3001 -c-1"
+  },
+  "dependencies": {
+    "@babel/core": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
+    "@babel/standalone": "^7.28.3",
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/hands": "^0.4.1675469240",
+    "@react-three/drei": "^10.7.3",
+    "@react-three/fiber": "^9.3.0",
+    "firebase": "^12.1.0",
+    "framer-motion": "^12.23.12",
+    "http-server": "^14.1.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.8.1",
+    "styled-components": "^6.1.19",
+    "three": "^0.179.1"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.28.3",
+    "babel-loader": "^9.2.1",
+    "css-loader": "^6.11.0",
+    "html-webpack-plugin": "^5.6.4",
+    "style-loader": "^3.3.4",
+    "webpack": "^5.101.3",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^4.15.2"
+  },
+  "keywords": [
+    "gesture-control",
+    "3d",
+    "webxr",
+    "mediapipe",
+    "threejs",
+    "firebase",
+    "education",
+    "hackathon",
+    "mvp"
+  ],
+  "author": "Codecortex",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/gesture-3d-learning-platform"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
