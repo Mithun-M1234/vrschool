@@ -7,8 +7,10 @@ import {
   where, 
   orderBy, 
   getDocs, 
+  onSnapshot,
   addDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
   Timestamp 
 } from 'firebase/firestore';
@@ -318,6 +320,73 @@ export const getTeacherAssignments = async (teacherId) => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error('Get teacher assignments error:', error);
+    throw error;
+  }
+};
+
+// Live room management
+export const createLiveRoom = async (room, createdBy, metadata = {}) => {
+  try {
+    const roomData = {
+      room,
+      createdBy,
+      metadata,
+      createdAt: serverTimestamp()
+    };
+
+    const roomRef = await addDoc(collection(db, 'liveRooms'), roomData);
+    return { id: roomRef.id, ...roomData };
+  } catch (error) {
+    console.error('Create live room error:', error);
+    throw error;
+  }
+};
+
+export const getLiveRoomsByUser = async (userId) => {
+  try {
+    const q = query(collection(db, 'liveRooms'), where('createdBy', '==', userId), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error('Get live rooms error:', error);
+    return [];
+  }
+};
+
+export const listenLiveRoomsByUser = (userId, onUpdate) => {
+  try {
+    const q = query(collection(db, 'liveRooms'), where('createdBy', '==', userId), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const rooms = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      onUpdate(rooms);
+    }, (err) => {
+      console.error('Live rooms listener error:', err);
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.error('Listen live rooms error:', error);
+    return () => {};
+  }
+};
+
+export const deleteLiveRoom = async (roomId) => {
+  try {
+    await deleteDoc(doc(db, 'liveRooms', roomId));
+    return true;
+  } catch (error) {
+    console.error('Delete live room error:', error);
+    throw error;
+  }
+};
+
+// Soft-delete a model by setting isActive to false
+export const deleteModel = async (modelId) => {
+  try {
+    await updateDoc(doc(db, 'models', modelId), { isActive: false });
+    return true;
+  } catch (error) {
+    console.error('Delete model error:', error);
     throw error;
   }
 };

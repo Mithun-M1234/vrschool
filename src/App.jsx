@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import ModelViewer from './pages/ModelViewer';
 import TeacherPortal from './pages/TeacherPortal';
 import HandTrackingDemo from './pages/HandTrackingDemo';
+import JitsiPage from './pages/JitsiPage';
 import './index.css';
 
 function App() {
@@ -77,6 +78,9 @@ function App() {
                   <HandTrackingDemo />
                 </ProtectedRoute>
               } />
+
+              {/* Public Jitsi page (no auth required) */}
+              <Route path="/jitsi" element={<JitsiPage />} />
               
               {/* Fallback route */}
               <Route path="*" element={
