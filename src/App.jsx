@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
@@ -13,6 +13,10 @@ import HandTrackingDemo from './pages/HandTrackingDemo';
 import './index.css';
 
 function App() {
+  // Initialize models on app startup
+  // (Removed model seeding - models now procedural or loaded directly)
+  useEffect(() => {}, []);
+
   return (
     <AuthProvider>
       <ThreeProvider>

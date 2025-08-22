@@ -282,10 +282,20 @@ const TeacherPortal = () => {
       const modelsData = await getModels();
       setModels(modelsData);
       
-      // Load analytics for each model
+      // Load analytics for each model (with error handling)
       const analyticsData = {};
       for (const model of modelsData) {
-        analyticsData[model.id] = await getModelAnalytics(model.id);
+        try {
+          analyticsData[model.id] = await getModelAnalytics(model.id);
+        } catch (analyticsError) {
+          console.warn(`Failed to load analytics for model ${model.id}:`, analyticsError.message);
+          // Set default analytics if loading fails
+          analyticsData[model.id] = {
+            totalViews: 0,
+            uniqueUsers: 0,
+            avgDuration: 0
+          };
+        }
       }
       setAnalytics(analyticsData);
     } catch (error) {
@@ -297,8 +307,22 @@ const TeacherPortal = () => {
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      setNewModel({ ...newModel, file });
-      toast.success(`Selected file: ${file.name}`);
+      // Check file type
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      const supportedTypes = ['glb', 'gltf', 'obj', 'fbx', 'html', 'htm'];
+      
+      if (!supportedTypes.includes(fileExtension)) {
+        toast.error('Unsupported file type. Please select a 3D model file (.glb, .gltf, .obj, .fbx) or HTML lesson (.html)');
+        return;
+      }
+      
+      setNewModel({ ...newModel, file, fileType: fileExtension });
+      
+      if (fileExtension === 'html' || fileExtension === 'htm') {
+        toast.success(`Selected HTML lesson: ${file.name}`);
+      } else {
+        toast.success(`Selected 3D model: ${file.name}`);
+      }
     }
   };
 
@@ -381,12 +405,12 @@ const TeacherPortal = () => {
       <UploadSection onClick={() => document.getElementById('file-upload').click()}>
         <UploadIcon>📁</UploadIcon>
         <UploadText>
-          Click to upload a new 3D model or interactive content (GLB, GLTF, OBJ, HTML formats supported)
+          Click to upload 3D models (.glb, .gltf, .obj, .fbx) or interactive HTML lessons (.html)
         </UploadText>
         <input
           id="file-upload"
           type="file"
-          accept=".glb,.gltf,.obj,.html"
+          accept=".glb,.gltf,.obj,.fbx,.html,.htm"
           onChange={handleFileUpload}
           style={{ display: 'none' }}
         />

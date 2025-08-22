@@ -153,18 +153,14 @@ const HandTrackingDemo = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.6 }}
           >
-            <CardTitle>Supported Gestures</CardTitle>
+            <CardTitle>Supported Gestures (Minimal)</CardTitle>
             <CardDescription>
-              The system can detect these hand gestures for 3D model interaction:
+              Current MVP uses just three simple gestures:
             </CardDescription>
-            
             <FeatureList>
-              <FeatureItem>Pinch gestures for object selection</FeatureItem>
-              <FeatureItem>Two-hand zoom in/out</FeatureItem>
-              <FeatureItem>Swipe left/right for rotation</FeatureItem>
-              <FeatureItem>Swipe up/down for elevation</FeatureItem>
-              <FeatureItem>Palm open/close for mode switching</FeatureItem>
-              <FeatureItem>Peace sign for special actions</FeatureItem>
+              <FeatureItem>Pinch & move: rotate model (pinch_drag)</FeatureItem>
+              <FeatureItem>Point Up: zoom in (point_up)</FeatureItem>
+              <FeatureItem>V Sign: zoom out (v_sign)</FeatureItem>
             </FeatureList>
           </DemoCard>
         </DemoGrid>

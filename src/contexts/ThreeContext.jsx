@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useRef, useState } from 'react';
 import * as THREE from 'three';
+// Use static import for GLTFLoader to avoid dynamic import race conditions / undefined constructor issues
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 const ThreeContext = createContext();
 
@@ -25,94 +27,106 @@ export const ThreeProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const initThreeJS = (container) => {
-    if (!container) return;
-
-    // Scene
-    const newScene = new THREE.Scene();
-    newScene.background = new THREE.Color(0x222222);
-    sceneRef.current = newScene;
-    setScene(newScene);
-
-    // Camera
-    const newCamera = new THREE.PerspectiveCamera(
-      75, 
-      container.clientWidth / container.clientHeight, 
-      0.1, 
-      1000
-    );
-    newCamera.position.set(0, 0, 5);
-    cameraRef.current = newCamera;
-    setCamera(newCamera);
-
-    // Renderer
-    const newRenderer = new THREE.WebGLRenderer({ antialias: true });
-    newRenderer.setSize(container.clientWidth, container.clientHeight);
-    newRenderer.shadowMap.enabled = true;
-    newRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    newRenderer.setPixelRatio(window.devicePixelRatio);
-    
-    // Clear previous renderer if exists
-    if (container.firstChild) {
-      container.removeChild(container.firstChild);
+    if (!container) {
+      console.error('Container is required for Three.js initialization');
+      throw new Error('Container is required for Three.js initialization');
     }
-    container.appendChild(newRenderer.domElement);
-    
-    rendererRef.current = newRenderer;
-    setRenderer(newRenderer);
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-    newScene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 10, 5);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    newScene.add(directionalLight);
-
-    // Handle resize
-    const handleResize = () => {
-      if (newCamera && newRenderer && container) {
-        newCamera.aspect = container.clientWidth / container.clientHeight;
-        newCamera.updateProjectionMatrix();
-        newRenderer.setSize(container.clientWidth, container.clientHeight);
+    try {
+      // Check if Three.js is available
+      if (typeof THREE === 'undefined') {
+        throw new Error('Three.js library not loaded');
       }
-    };
 
-    window.addEventListener('resize', handleResize);
+      console.log('Initializing Three.js scene...');
 
-    // Start render loop
-    const animate = () => {
-      requestAnimationFrame(animate);
+      // Scene
+      const newScene = new THREE.Scene();
+      newScene.background = new THREE.Color(0x222222);
+      sceneRef.current = newScene;
+      setScene(newScene);
+
+      // Camera
+      const newCamera = new THREE.PerspectiveCamera(
+        75, 
+        container.clientWidth / container.clientHeight, 
+        0.1, 
+        1000
+      );
+      newCamera.position.set(0, 0, 5);
+      cameraRef.current = newCamera;
+      setCamera(newCamera);
+
+      // Renderer
+      const newRenderer = new THREE.WebGLRenderer({ antialias: true });
+      newRenderer.setSize(container.clientWidth, container.clientHeight);
+      newRenderer.shadowMap.enabled = true;
+      newRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      newRenderer.setPixelRatio(window.devicePixelRatio);
       
-      if (controlsRef.current) {
-        controlsRef.current.update();
+      // Clear previous renderer if exists
+      if (container.firstChild) {
+        container.removeChild(container.firstChild);
       }
+      container.appendChild(newRenderer.domElement);
       
-      // Auto-rotate solar system models
-      if (modelRef.current && modelRef.current.userData.type === 'solar-system') {
-        modelRef.current.rotation.y += 0.005;
-      }
-      
-      if (newRenderer && newScene && newCamera) {
-        newRenderer.render(newScene, newCamera);
-      }
-    };
-    animate();
+      rendererRef.current = newRenderer;
+      setRenderer(newRenderer);
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (container && newRenderer.domElement) {
-        container.removeChild(newRenderer.domElement);
-      }
-      newRenderer.dispose();
-    };
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+      newScene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(10, 10, 5);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.mapSize.width = 2048;
+      directionalLight.shadow.mapSize.height = 2048;
+      newScene.add(directionalLight);
+
+      // Handle resize
+      const handleResize = () => {
+        if (newCamera && newRenderer && container) {
+          newCamera.aspect = container.clientWidth / container.clientHeight;
+          newCamera.updateProjectionMatrix();
+          newRenderer.setSize(container.clientWidth, container.clientHeight);
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      // Start render loop
+      const animate = () => {
+        requestAnimationFrame(animate);
+        
+        if (controlsRef.current) {
+          controlsRef.current.update();
+        }
+        
+        // Auto-rotate solar system models
+        if (modelRef.current && modelRef.current.userData && modelRef.current.userData.type === 'solar-system') {
+          modelRef.current.rotation.y += 0.005;
+        }
+        
+        if (newRenderer && newScene && newCamera) {
+          newRenderer.render(newScene, newCamera);
+        }
+      };
+      animate();
+
+      console.log('✅ Three.js initialized successfully');
+    } catch (error) {
+      console.error('❌ Error initializing Three.js:', error);
+      throw error;
+    }
   };
 
   const loadModel = async (modelData) => {
-    if (!sceneRef.current) return;
+    if (!sceneRef.current) {
+      throw new Error('Scene not initialized. Please initialize Three.js first.');
+    }
 
+    console.log('Loading model:', modelData);
     setIsLoading(true);
     
     try {
@@ -124,15 +138,22 @@ export const ThreeProvider = ({ children }) => {
       let newModel;
 
       if (modelData.fileName && modelData.fileName.startsWith('http')) {
-        // Load from Firebase Storage URL
-        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-        const loader = new GLTFLoader();
-        
-        const gltf = await new Promise((resolve, reject) => {
-          loader.load(modelData.fileName, resolve, undefined, reject);
-        });
-        
-        newModel = gltf.scene;
+        // Load from remote (Firebase Storage) URL
+        try {
+          const loader = new GLTFLoader();
+          const gltf = await new Promise((resolve, reject) => {
+            loader.load(
+              modelData.fileName,
+              (gltf) => resolve(gltf),
+              undefined,
+              (error) => reject(error)
+            );
+          });
+          newModel = gltf.scene;
+        } catch (error) {
+          console.error('Error loading GLTF model, falling back to demo primitive:', error);
+          newModel = createDemoModel(modelData);
+        }
       } else {
         // Create demo model based on name
         newModel = createDemoModel(modelData);
@@ -151,10 +172,16 @@ export const ThreeProvider = ({ children }) => {
     } catch (error) {
       console.error('Error loading model:', error);
       // Create fallback model
-      const fallbackModel = createDemoModel(modelData);
-      sceneRef.current.add(fallbackModel);
-      modelRef.current = fallbackModel;
-      setModel(fallbackModel);
+      try {
+        const fallbackModel = createDemoModel(modelData);
+        sceneRef.current.add(fallbackModel);
+        modelRef.current = fallbackModel;
+        setModel(fallbackModel);
+        console.log('✅ Fallback model created');
+      } catch (fallbackError) {
+        console.error('Error creating fallback model:', fallbackError);
+        throw new Error(`Failed to load model: ${error.message}`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -255,6 +282,28 @@ export const ThreeProvider = ({ children }) => {
     }
   };
 
+  const cleanupScene = () => {
+    if (rendererRef.current) {
+      if (rendererRef.current.domElement && rendererRef.current.domElement.parentNode) {
+        rendererRef.current.domElement.parentNode.removeChild(rendererRef.current.domElement);
+      }
+      rendererRef.current.dispose();
+    }
+    
+    // Clear refs
+    sceneRef.current = null;
+    cameraRef.current = null;
+    rendererRef.current = null;
+    modelRef.current = null;
+    controlsRef.current = null;
+    
+    // Clear state
+    setScene(null);
+    setCamera(null);
+    setRenderer(null);
+    setModel(null);
+  };
+
   const value = {
     scene,
     camera,
@@ -269,6 +318,7 @@ export const ThreeProvider = ({ children }) => {
     initThreeJS,
     loadModel,
     applyGestureAction,
+    cleanupScene,
   };
 
   return (

@@ -1,4 +1,4 @@
-// Hand tracking service using MediaPipe
+// Minimal hand tracking service (pinch rotate, point_up zoom in, v_sign zoom out)
 class HandTracker {
   constructor(options = {}) {
     this.options = {
@@ -15,12 +15,21 @@ class HandTracker {
     this.canvasElement = null;
     this.canvasCtx = null;
     this.eventListeners = {};
-    this.lastGestures = {};
+  this.lastGestures = {};
     this.isInitialized = false;
   }
 
   async initialize(videoElement, canvasElement) {
     try {
+      // Check if MediaPipe libraries are available
+      if (typeof window.Hands === 'undefined') {
+        throw new Error('MediaPipe Hands library not loaded. Please include MediaPipe scripts in your HTML.');
+      }
+      
+      if (typeof window.Camera === 'undefined') {
+        throw new Error('MediaPipe Camera library not loaded. Please include MediaPipe scripts in your HTML.');
+      }
+
       this.videoElement = videoElement;
       this.canvasElement = canvasElement;
       this.canvasCtx = canvasElement.getContext('2d');
@@ -44,7 +53,9 @@ class HandTracker {
       // Initialize camera
       this.camera = new window.Camera(videoElement, {
         onFrame: async () => {
-          await this.hands.send({ image: videoElement });
+          if (this.hands) {
+            await this.hands.send({ image: videoElement });
+          }
         },
         width: 640,
         height: 480
@@ -56,28 +67,22 @@ class HandTracker {
       
     } catch (error) {
       console.error('Failed to initialize hand tracking:', error);
+      this.isInitialized = false;
       throw error;
     }
   }
 
   onResults(results) {
+    if (!this.canvasCtx || !this.canvasElement) {
+      console.warn('Canvas context not available');
+      return;
+    }
+
     // Clear canvas
     this.canvasCtx.save();
     this.canvasCtx.clearRect(0, 0, this.canvasElement.width, this.canvasElement.height);
     
-    // Draw hand landmarks
-    if (results.multiHandLandmarks) {
-      for (const landmarks of results.multiHandLandmarks) {
-        window.drawConnectors(this.canvasCtx, landmarks, window.HAND_CONNECTIONS, {
-          color: '#00FF00',
-          lineWidth: 2
-        });
-        window.drawLandmarks(this.canvasCtx, landmarks, {
-          color: '#FF0000',
-          lineWidth: 1
-        });
-      }
-    }
+  // (Optional) Drawing removed for performance in minimal mode
     
     this.canvasCtx.restore();
 
@@ -93,77 +98,59 @@ class HandTracker {
     results.multiHandLandmarks.forEach((landmarks, index) => {
       const handedness = results.multiHandedness[index].label;
       
-      // Detect pinch gesture
-      const pinchDistance = this.calculateDistance(
-        landmarks[4], // Thumb tip
-        landmarks[8]  // Index finger tip
-      );
-      
-      const isPinching = pinchDistance < 0.05;
-      const wasLastPinching = this.lastGestures[`${handedness}_pinch`] || false;
-      
-      if (isPinching && !wasLastPinching) {
-        this.emit('pinch_start', { handedness, landmarks });
-      } else if (!isPinching && wasLastPinching) {
-        this.emit('pinch_end', { handedness, landmarks });
-      }
-      
-      this.lastGestures[`${handedness}_pinch`] = isPinching;
-
-      // Detect swipe gestures
-      this.detectSwipeGestures(landmarks, handedness);
-      
-      // Detect zoom gestures (two-finger pinch)
-      if (isPinching) {
-        this.detectZoomGestures(landmarks, handedness);
-      }
+      this.detectCoreGestures(landmarks, handedness);
     });
   }
+  detectCoreGestures(landmarks, handedness) {
+    // Pinch detection (thumb tip & index tip proximity)
+    const thumb = landmarks[4];
+    const index = landmarks[8];
+    const pinchDist = this.calculateDistance(thumb, index);
+    const isPinching = pinchDist < 0.05;
+    const pinchKey = `${handedness}_pinch_active`;
+    const wasPinching = this.lastGestures[pinchKey] || false;
+    if (isPinching && !wasPinching) this.emit('pinch_start', { handedness, landmarks });
+    if (!isPinching && wasPinching) this.emit('pinch_end', { handedness, landmarks });
+    this.lastGestures[pinchKey] = isPinching;
 
-  detectSwipeGestures(landmarks, handedness) {
-    const indexTip = landmarks[8];
-    const lastPosition = this.lastGestures[`${handedness}_position`];
-    
-    if (lastPosition) {
-      const deltaX = indexTip.x - lastPosition.x;
-      const deltaY = indexTip.y - lastPosition.y;
-      const threshold = 0.05;
-      
-      if (Math.abs(deltaX) > threshold) {
-        if (deltaX > 0) {
-          this.emit('swipe_right', { handedness, delta: deltaX, landmarks });
-        } else {
-          this.emit('swipe_left', { handedness, delta: Math.abs(deltaX), landmarks });
+    // Pinch drag (while pinching, track index finger delta)
+    if (isPinching) {
+      const posKey = `${handedness}_pinch_pos`;
+      const lastPos = this.lastGestures[posKey];
+      if (lastPos) {
+        const dx = index.x - lastPos.x;
+        const dy = index.y - lastPos.y;
+        const thresh = 0.003; // fine threshold for smooth rotation
+        if (Math.abs(dx) > thresh || Math.abs(dy) > thresh) {
+          this.emit('pinch_drag', { handedness, dx, dy, landmarks });
         }
       }
-      
-      if (Math.abs(deltaY) > threshold) {
-        if (deltaY > 0) {
-          this.emit('swipe_down', { handedness, delta: deltaY, landmarks });
-        } else {
-          this.emit('swipe_up', { handedness, delta: Math.abs(deltaY), landmarks });
-        }
-      }
+      this.lastGestures[posKey] = { x: index.x, y: index.y };
     }
-    
-    this.lastGestures[`${handedness}_position`] = { x: indexTip.x, y: indexTip.y };
+
+    // Static point_up (index extended upward) & v_sign
+    const wrist = landmarks[0];
+    const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y, (a.z||0)-(b.z||0));
+    const indexExtended = dist(index, wrist) > dist(landmarks[6], wrist) * 1.2;
+    const middleExtended = dist(landmarks[12], wrist) > dist(landmarks[10], wrist) * 1.2;
+    const ringFolded = dist(landmarks[16], wrist) < dist(landmarks[14], wrist) * 1.1;
+    const pinkyFolded = dist(landmarks[20], wrist) < dist(landmarks[18], wrist) * 1.1;
+    const pointUp = indexExtended && !middleExtended && (index.y < wrist.y - 0.02);
+    const vSign = indexExtended && middleExtended && ringFolded && pinkyFolded;
+    this.emitState('point_up', handedness, pointUp, landmarks);
+    this.emitState('v_sign', handedness, vSign, landmarks);
   }
 
-  detectZoomGestures(landmarks, handedness) {
-    const thumbTip = landmarks[4];
-    const indexTip = landmarks[8];
-    const currentDistance = this.calculateDistance(thumbTip, indexTip);
-    const lastDistance = this.lastGestures[`${handedness}_pinch_distance`];
-    
-    if (lastDistance) {
-      const delta = currentDistance - lastDistance;
-      if (Math.abs(delta) > 0.01) {
-        this.emit('pinch_zoom', { handedness, delta, currentDistance, landmarks });
-      }
-    }
-    
-    this.lastGestures[`${handedness}_pinch_distance`] = currentDistance;
+  emitState(name, handedness, active, landmarks) {
+    const key = `${handedness}_${name}`;
+    const prev = this.lastGestures[key] || false;
+    if (prev === active) return;
+    this.lastGestures[key] = active;
+    if (active) this.emit(name, { handedness, landmarks });
+    else this.emit(name + '_end', { handedness, landmarks });
   }
+
+  // emitStateGesture removed (advanced gestures not in minimal set)
 
   calculateDistance(point1, point2) {
     const dx = point1.x - point2.x;
@@ -178,15 +165,18 @@ class HandTracker {
     this.eventListeners[event].push(callback);
   }
 
+  off(event, callback) {
+    if (!this.eventListeners[event]) return;
+    this.eventListeners[event] = this.eventListeners[event].filter(cb => cb !== callback);
+  }
+
   emit(event, data) {
     if (this.eventListeners[event]) {
       this.eventListeners[event].forEach(callback => callback(data));
     }
   }
 
-  onUserUpdate(callback) {
-    this.userUpdateCallback = callback;
-  }
+  // onUserUpdate removed (multi-user mode disabled in minimal build)
 
   dispose() {
     if (this.camera) {

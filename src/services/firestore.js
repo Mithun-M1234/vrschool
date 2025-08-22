@@ -323,24 +323,49 @@ export const getTeacherAssignments = async (teacherId) => {
 };
 
 // Analytics & Interactions
-export const logInteraction = async (userId, modelId, assignmentId, sessionData) => {
+export const logInteraction = async (userId, interactionData) => {
   try {
-    const interactionData = {
-      userId,
-      modelId,
-      assignmentId,
-      sessionStart: Timestamp.fromDate(sessionData.sessionStart),
-      sessionEnd: Timestamp.fromDate(sessionData.sessionEnd),
-      gesturesUsed: sessionData.gesturesUsed || [],
-      totalGestures: sessionData.totalGestures || 0,
-      sessionDuration: sessionData.sessionDuration || 0,
-      completionPercentage: sessionData.completionPercentage || 0,
-      createdAt: serverTimestamp()
-    };
-
-    await addDoc(collection(db, 'interactions'), interactionData);
+    // Handle both old format (modelId, assignmentId, sessionData) and new format (single object)
+    let formattedData;
     
-    return interactionData;
+    if (typeof interactionData === 'object' && interactionData.type) {
+      // New format - single object with all data
+      formattedData = {
+        userId,
+        modelId: interactionData.modelId || 'unknown',
+        assignmentId: interactionData.assignmentId || null,
+        sessionStart: interactionData.sessionStart ? Timestamp.fromDate(new Date(interactionData.sessionStart)) : Timestamp.now(),
+        sessionEnd: interactionData.sessionEnd ? Timestamp.fromDate(new Date(interactionData.sessionEnd)) : Timestamp.now(),
+        gesturesUsed: interactionData.gesturesUsed || [],
+        totalGestures: interactionData.totalGestures || 0,
+        sessionDuration: interactionData.sessionDuration || 0,
+        completionPercentage: interactionData.completionPercentage || 0,
+        type: interactionData.type || 'session_complete',
+        createdAt: serverTimestamp()
+      };
+    } else {
+      // Old format compatibility (if someone calls with old signature)
+      const modelId = arguments[1];
+      const assignmentId = arguments[2];
+      const sessionData = arguments[3] || interactionData;
+      
+      formattedData = {
+        userId,
+        modelId,
+        assignmentId,
+        sessionStart: sessionData?.sessionStart ? Timestamp.fromDate(sessionData.sessionStart) : Timestamp.now(),
+        sessionEnd: sessionData?.sessionEnd ? Timestamp.fromDate(sessionData.sessionEnd) : Timestamp.now(),
+        gesturesUsed: sessionData?.gesturesUsed || [],
+        totalGestures: sessionData?.totalGestures || 0,
+        sessionDuration: sessionData?.sessionDuration || 0,
+        completionPercentage: sessionData?.completionPercentage || 0,
+        createdAt: serverTimestamp()
+      };
+    }
+
+    await addDoc(collection(db, 'interactions'), formattedData);
+    
+    return formattedData;
   } catch (error) {
     console.error('Log interaction error:', error);
     throw error;
@@ -414,6 +439,19 @@ export const getAnalytics = async (teacherId, timeRange = '7d') => {
         : 0
     };
   } catch (error) {
+    // Check if it's a permissions error
+    if (error.code === 'permission-denied' || error.message.includes('insufficient permissions')) {
+      console.warn('Analytics data access denied - user lacks permissions');
+      // Return default analytics for permission errors
+      return {
+        totalSessions: 0,
+        avgEngagement: 0,
+        topGestures: [],
+        totalStudents: 0,
+        avgSessionDuration: 0
+      };
+    }
+    
     console.error('Get analytics error:', error);
     throw error;
   }
