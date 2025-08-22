@@ -7,10 +7,18 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Models collection - public read, authenticated write
+    // Models collection - public read, authenticated create, teacher/owner update-delete
     match /models/{modelId} {
       allow read: if true; // Public read access
-      allow write: if request.auth != null; // Any authenticated user can upload models
+      // Allow creation by any authenticated user
+      allow create: if request.auth != null;
+      // Allow updates and deletes only by teachers or the model owner
+      allow update, delete: if request.auth != null && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher'
+        || request.auth.uid == resource.data.ownerId
+      );
+      // Prevent other write operations
+      allow write: if false;
     }
     
     // Assignments collection

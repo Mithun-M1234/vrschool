@@ -1,6 +1,26 @@
 // Sample 3D models for demonstration - can be used while Firebase Storage is being set up
 export const sampleModels = [
   {
+    id: 'gesture-earth-demo',
+    name: 'Gesture-Controlled Earth Visualization',
+    description: 'Interactive 3D Earth model with gesture recognition controls.',
+    fileName: null, // Will be loaded from Firebase Storage
+    configFileName: null,
+    uploadedBy: 'system',
+    isActive: true,
+    featured: true,
+    fileType: 'html',
+    metadata: {
+      subject: 'Earth Science',
+      grade: 'High School',
+      topic: 'Astronomy',
+      tags: ['earth', 'gesture-control', 'astronomy', 'interactive'],
+      difficulty: 'intermediate',
+      estimatedTime: '15-20 minutes',
+      type: 'interactive-demo'
+    }
+  },
+  {
     id: 'heart-model-demo',
     name: 'Human Heart Model',
     description: 'Interactive 3D model of the human heart showing chambers, valves, and blood flow',
@@ -13,21 +33,6 @@ export const sampleModels = [
       grade: '9-12',
       topic: 'Cardiovascular System',
       tags: ['anatomy', 'heart', 'circulation']
-    }
-  },
-  {
-    id: 'solar-system-demo',
-    name: 'Solar System Model',
-    description: 'Complete solar system with planets, orbits, and interactive features',
-    fileName: '/models/solar-system.glb',
-    configFileName: '/configs/SolarSystem_gestureConfig.json',
-    uploadedBy: 'system',
-    isActive: true,
-    metadata: {
-      subject: 'Astronomy',
-      grade: '6-12',
-      topic: 'Solar System',
-      tags: ['planets', 'space', 'astronomy']
     }
   },
   {

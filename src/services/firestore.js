@@ -7,8 +7,10 @@ import {
   where, 
   orderBy, 
   getDocs, 
+  onSnapshot,
   addDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
   Timestamp 
 } from 'firebase/firestore';
@@ -322,25 +324,117 @@ export const getTeacherAssignments = async (teacherId) => {
   }
 };
 
-// Analytics & Interactions
-export const logInteraction = async (userId, modelId, assignmentId, sessionData) => {
+// Live room management
+export const createLiveRoom = async (room, createdBy, metadata = {}) => {
   try {
-    const interactionData = {
-      userId,
-      modelId,
-      assignmentId,
-      sessionStart: Timestamp.fromDate(sessionData.sessionStart),
-      sessionEnd: Timestamp.fromDate(sessionData.sessionEnd),
-      gesturesUsed: sessionData.gesturesUsed || [],
-      totalGestures: sessionData.totalGestures || 0,
-      sessionDuration: sessionData.sessionDuration || 0,
-      completionPercentage: sessionData.completionPercentage || 0,
+    const roomData = {
+      room,
+      createdBy,
+      metadata,
       createdAt: serverTimestamp()
     };
 
-    await addDoc(collection(db, 'interactions'), interactionData);
+    const roomRef = await addDoc(collection(db, 'liveRooms'), roomData);
+    return { id: roomRef.id, ...roomData };
+  } catch (error) {
+    console.error('Create live room error:', error);
+    throw error;
+  }
+};
+
+export const getLiveRoomsByUser = async (userId) => {
+  try {
+    const q = query(collection(db, 'liveRooms'), where('createdBy', '==', userId), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (error) {
+    console.error('Get live rooms error:', error);
+    return [];
+  }
+};
+
+export const listenLiveRoomsByUser = (userId, onUpdate) => {
+  try {
+    const q = query(collection(db, 'liveRooms'), where('createdBy', '==', userId), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const rooms = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      onUpdate(rooms);
+    }, (err) => {
+      console.error('Live rooms listener error:', err);
+    });
+
+    return unsubscribe;
+  } catch (error) {
+    console.error('Listen live rooms error:', error);
+    return () => {};
+  }
+};
+
+export const deleteLiveRoom = async (roomId) => {
+  try {
+    await deleteDoc(doc(db, 'liveRooms', roomId));
+    return true;
+  } catch (error) {
+    console.error('Delete live room error:', error);
+    throw error;
+  }
+};
+
+// Soft-delete a model by setting isActive to false
+export const deleteModel = async (modelId) => {
+  try {
+    await updateDoc(doc(db, 'models', modelId), { isActive: false });
+    return true;
+  } catch (error) {
+    console.error('Delete model error:', error);
+    throw error;
+  }
+};
+
+// Analytics & Interactions
+export const logInteraction = async (userId, interactionData) => {
+  try {
+    // Handle both old format (modelId, assignmentId, sessionData) and new format (single object)
+    let formattedData;
     
-    return interactionData;
+    if (typeof interactionData === 'object' && interactionData.type) {
+      // New format - single object with all data
+      formattedData = {
+        userId,
+        modelId: interactionData.modelId || 'unknown',
+        assignmentId: interactionData.assignmentId || null,
+        sessionStart: interactionData.sessionStart ? Timestamp.fromDate(new Date(interactionData.sessionStart)) : Timestamp.now(),
+        sessionEnd: interactionData.sessionEnd ? Timestamp.fromDate(new Date(interactionData.sessionEnd)) : Timestamp.now(),
+        gesturesUsed: interactionData.gesturesUsed || [],
+        totalGestures: interactionData.totalGestures || 0,
+        sessionDuration: interactionData.sessionDuration || 0,
+        completionPercentage: interactionData.completionPercentage || 0,
+        type: interactionData.type || 'session_complete',
+        createdAt: serverTimestamp()
+      };
+    } else {
+      // Old format compatibility (if someone calls with old signature)
+      const modelId = arguments[1];
+      const assignmentId = arguments[2];
+      const sessionData = arguments[3] || interactionData;
+      
+      formattedData = {
+        userId,
+        modelId,
+        assignmentId,
+        sessionStart: sessionData?.sessionStart ? Timestamp.fromDate(sessionData.sessionStart) : Timestamp.now(),
+        sessionEnd: sessionData?.sessionEnd ? Timestamp.fromDate(sessionData.sessionEnd) : Timestamp.now(),
+        gesturesUsed: sessionData?.gesturesUsed || [],
+        totalGestures: sessionData?.totalGestures || 0,
+        sessionDuration: sessionData?.sessionDuration || 0,
+        completionPercentage: sessionData?.completionPercentage || 0,
+        createdAt: serverTimestamp()
+      };
+    }
+
+    await addDoc(collection(db, 'interactions'), formattedData);
+    
+    return formattedData;
   } catch (error) {
     console.error('Log interaction error:', error);
     throw error;
@@ -414,6 +508,19 @@ export const getAnalytics = async (teacherId, timeRange = '7d') => {
         : 0
     };
   } catch (error) {
+    // Check if it's a permissions error
+    if (error.code === 'permission-denied' || error.message.includes('insufficient permissions')) {
+      console.warn('Analytics data access denied - user lacks permissions');
+      // Return default analytics for permission errors
+      return {
+        totalSessions: 0,
+        avgEngagement: 0,
+        topGestures: [],
+        totalStudents: 0,
+        avgSessionDuration: 0
+      };
+    }
+    
     console.error('Get analytics error:', error);
     throw error;
   }

@@ -145,6 +145,9 @@ const Header = () => {
       
       <UserInfo>
         <NavLinks>
+          <NavLink to="/jitsi">
+            🔴 Live
+          </NavLink>
           <NavLink to="/">
             <FaUser /> Dashboard
           </NavLink>

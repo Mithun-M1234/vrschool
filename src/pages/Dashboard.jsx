@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFirestore } from '../hooks/useFirestore';
 import { Link } from 'react-router-dom';
 import { FaHeart, FaSolarPanel, FaPlay, FaEye, FaClock, FaAward } from 'react-icons/fa';
+import { getLiveRoomsByUser, deleteLiveRoom, listenLiveRoomsByUser, deleteModel } from '../services/firestore';
+import toast from 'react-hot-toast';
 
 const DashboardContainer = styled.div`
   min-height: 100vh;
@@ -153,6 +155,19 @@ const PlayButton = styled(Link)`
   }
 `;
 
+const DeleteButton = styled.button`
+  background: linear-gradient(45deg, #ff6b6b, #ff4757);
+  color: white;
+  border: none;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  &:hover { transform: translateY(-2px); }
+`;
+
 const ModelMeta = styled.div`
   display: flex;
   flex-direction: column;
@@ -174,6 +189,7 @@ const Dashboard = () => {
   const [models, setModels] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
+  const [liveRooms, setLiveRooms] = useState([]);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -192,10 +208,41 @@ const Dashboard = () => {
       }
     };
 
-    if (user) {
-      loadDashboardData();
-    }
+    let unsubscribe = null;
+
+    const start = async () => {
+      await loadDashboardData();
+      if (userProfile?.role === 'teacher') {
+        unsubscribe = listenLiveRoomsByUser(user.uid, (rooms) => setLiveRooms(rooms));
+      }
+    };
+
+    if (user) start();
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [user]);
+
+  const handleDeleteModel = async (modelId) => {
+    if (userProfile?.role !== 'teacher') {
+      alert('Only teachers can delete models.');
+      return;
+    }
+
+    if (!confirm('Delete this 3D model? This will hide it from students. Proceed?')) return;
+
+    const prev = models;
+    setModels(models.filter(m => m.id !== modelId));
+    try {
+      await deleteModel(modelId);
+      toast.success('Model deleted');
+    } catch (err) {
+      console.error('deleteModel failed', err);
+      setModels(prev);
+      toast.error('Failed to delete model');
+    }
+  };
 
   const getModelIcon = (modelId) => {
     switch (modelId) {
@@ -293,9 +340,14 @@ const Dashboard = () => {
                 <ModelTitle>{model.name}</ModelTitle>
                 <ModelDescription>{model.description}</ModelDescription>
                 <ModelFooter>
-                  <PlayButton to={`/model/${model.id}`}>
-                    <FaPlay /> Explore
-                  </PlayButton>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <PlayButton to={`/model/${model.id}`}>
+                      <FaPlay /> Explore
+                    </PlayButton>
+                    {userProfile?.role === 'teacher' && (
+                      <DeleteButton onClick={() => handleDeleteModel(model.id)}>Delete</DeleteButton>
+                    )}
+                  </div>
                   <ModelMeta>
                     <div>⏱️ {model.estimatedTime || '10'} min</div>
                     <div>📚 {model.subject || 'Science'}</div>
@@ -306,6 +358,37 @@ const Dashboard = () => {
           ))}
         </ModelsGrid>
       </ModelsSection>
+
+      {userProfile?.role === 'teacher' && (
+        <ModelsSection>
+          <SectionTitle>🔴 Saved Live Rooms</SectionTitle>
+          {liveRooms.length === 0 ? (
+            <div style={{ padding: 12 }}>No saved rooms. Create one from the Live page.</div>
+          ) : (
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {liveRooms.map(r => (
+                <div key={r.id} style={{ background: 'white', padding: 12, borderRadius: 8, minWidth: 220 }}>
+                  <div style={{ fontWeight: 'bold' }}>{r.room}</div>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                    <a href={`/jitsi?room=${encodeURIComponent(r.room)}`} target="_blank" rel="noreferrer">Join</a>
+                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/jitsi?room=${encodeURIComponent(r.room)}`); toast.success('Copied'); }}>Copy</button>
+                    <button onClick={async () => {
+                      if (!confirm('Delete this saved room?')) return;
+                      try {
+                        await deleteLiveRoom(r.id);
+                        setLiveRooms(prev => prev.filter(x => x.id !== r.id));
+                        toast.success('Deleted');
+                      } catch (e) {
+                        toast.error('Delete failed');
+                      }
+                    }}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ModelsSection>
+      )}
     </DashboardContainer>
   );
 };
