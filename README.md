@@ -17,7 +17,6 @@ This platform enables teachers to upload 3D models (created in Blender), configu
 
 ### 👩‍🏫 **Teacher Workflow**
 - Upload 3D models (.glb/.gltf)
-- Auto-generate or customize gesture mappings
 - Assign models to students
 - Track engagement analytics
 
